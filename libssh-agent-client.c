@@ -544,7 +544,7 @@ ssize_t ssh_agent_decrypt(int fd, unsigned char *databuf, size_t databuflen, uns
 #else
 	if (1) {
 #endif
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable decrypting response.  Got %i, expected %i.", *buf_p, SSH2_AGENT_DECRYPT_RESPONSE);
+		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable decrypting response.  Got %i, expected %i.", *buf_p, /*SSH2_AGENT_DECRYPT_RESPONSE*/0);
 		return(-1);
 	}
 	buf_p++;
@@ -629,7 +629,7 @@ ssize_t ssh_agent_getcert(int fd, unsigned char *retbuf, size_t retbuflen, struc
 #else
 	if (1) {
 #endif
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable certificate request response.  Got %i, expected %i.", *buf_p, SSH2_AGENT_PKCS11_CERT_RESPONSE);
+		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable certificate request response.  Got %i, expected %i.", *buf_p, /*SSH2_AGENT_PKCS11_CERT_RESPONSE*/0);
 		return(-1);
 	}
 	buf_p++;
