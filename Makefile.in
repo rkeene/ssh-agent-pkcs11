@@ -1,0 +1,79 @@
+srcdir       := @srcdir@
+VPATH        := $(srcdir)
+
+CC           := @PTHREAD_CC@
+CFLAGS       := @CFLAGS@ @PTHREAD_CFLAGS@
+DEBUGCFLAGS  := @CFLAGS@ @PTHREAD_CFLAGS@
+CPPFLAGS     := @CPPFLAGS@ @DEFS@ -I$(srcdir) -I$(srcdir)/pkcs11/ -I.
+DEBUGCPPFLAGS := @CPPFLAGS@ @DEFS@ -DLIBSSH_AGENT_CLIENT_DEBUG=1 -DLIBSSH_AGENT_CLIENT_PKCS11_PRO_DEBUG=1 -I$(srcdir) -I$(srcdir)/pkcs11/ -I.
+LDFLAGS      := @LDFLAGS@
+LIBS         := @LIBS@ @PTHREAD_LIBS@
+SHOBJFLAGS   := @SHOBJFLAGS@
+SHOBJLDFLAGS := @SHOBJLDFLAGS@
+AR           := @AR@
+RANLIB       := @RANLIB@
+prefix       := @prefix@
+exec_prefix  := @exec_prefix@
+libdir       := @libdir@
+@SET_MAKE@
+
+all: libssh-agent-pkcs11-provider.@SHOBJEXT@ libssh-agent-pkcs11-provider_g.@SHOBJEXT@
+	$(MAKE) libssh-agent-pkcs11-provider.@SHOBJEXT@
+	-$(MAKE) libssh-agent-pkcs11-provider_g.@SHOBJEXT@
+
+test: $(srcdir)/test.c libssh-agent-client.a libssh-agent-pkcs11-provider.@SHOBJEXT@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -L. -o test $(srcdir)/test.c $(LIBS) -lssh-agent-client -lssh-agent-pkcs11-provider
+
+libssh-agent-client.a: libssh-agent-client.o
+	$(AR) cru libssh-agent-client.a libssh-agent-client.o
+	$(RANLIB) libssh-agent-client.a
+
+libssh-agent-client_g.a: libssh-agent-client_g.o
+	$(AR) cru libssh-agent-client_g.a libssh-agent-client_g.o
+	$(RANLIB) libssh-agent-client_g.a
+
+libssh-agent-client.o: $(srcdir)/libssh-agent-client.c $(srcdir)/libssh-agent-client.h $(srcdir)/debug.h
+	$(CC) $(SHOBJFLAGS) $(CPPFLAGS) $(CFLAGS) -o libssh-agent-client.o -c $(srcdir)/libssh-agent-client.c
+
+libssh-agent-client_g.o: $(srcdir)/libssh-agent-client.c $(srcdir)/libssh-agent-client.h $(srcdir)/debug.h
+	$(CC) $(SHOBJFLAGS) $(DEBUGCPPFLAGS) $(DEBUGCFLAGS) -o libssh-agent-client_g.o -c $(srcdir)/libssh-agent-client.c
+
+libssh-agent-pkcs11-provider.o: $(srcdir)/libssh-agent-pkcs11-provider.c $(srcdir)/debug.h
+	$(CC) $(SHOBJFLAGS) $(CPPFLAGS) $(CFLAGS) -o libssh-agent-pkcs11-provider.o -c $(srcdir)/libssh-agent-pkcs11-provider.c
+
+libssh-agent-pkcs11-provider_g.o: $(srcdir)/libssh-agent-pkcs11-provider.c $(srcdir)/debug.h
+	$(CC) $(SHOBJFLAGS) $(DEBUGCPPFLAGS) $(DEBUGCFLAGS) -o libssh-agent-pkcs11-provider_g.o -c $(srcdir)/libssh-agent-pkcs11-provider.c
+
+asn1-x509.o: $(srcdir)/asn1-x509.c $(srcdir)/asn1-x509.h $(srcdir)/debug.h
+	$(CC) $(SHOBJFLAGS) $(CPPFLAGS) $(CFLAGS) -o asn1-x509.o -c $(srcdir)/asn1-x509.c
+
+asn1-x509_g.o: $(srcdir)/asn1-x509.c $(srcdir)/asn1-x509.h $(srcdir)/debug.h
+	$(CC) $(SHOBJFLAGS) $(DEBUGCPPFLAGS) $(DEBUGCFLAGS) -o asn1-x509_g.o -c $(srcdir)/asn1-x509.c
+
+libssh-agent-pkcs11-provider.@SHOBJEXT@: libssh-agent-pkcs11-provider.o asn1-x509.o libssh-agent-client.a
+	$(CC) $(SHOBJFLAGS) $(CPPFLAGS) $(CFLAGS) $(SHOBJLDFLAGS) $(LDFLAGS) -L. -o libssh-agent-pkcs11-provider.@SHOBJEXT@ libssh-agent-pkcs11-provider.o asn1-x509.o $(LIBS) -lssh-agent-client
+
+libssh-agent-pkcs11-provider_g.@SHOBJEXT@: libssh-agent-pkcs11-provider_g.o asn1-x509_g.o libssh-agent-client_g.a
+	$(CC) $(SHOBJFLAGS) $(DEBUGCPPFLAGS) $(DEBUGCFLAGS) $(SHOBJLDFLAGS) $(LDFLAGS) -L. -o libssh-agent-pkcs11-provider_g.@SHOBJEXT@ libssh-agent-pkcs11-provider_g.o asn1-x509_g.o $(LIBS) -lssh-agent-client_g
+
+install: libssh-agent-pkcs11-provider.@SHOBJEXT@ libssh-agent-pkcs11-provider_g.@SHOBJEXT@
+	-mkdir -p "$(DESTDIR)$(libdir)"
+	rm -f "$(DESTDIR)$(libdir)/libssh-agent-pkcs11-provider.@SHOBJEXT@" "$(DESTDIR)$(libdir)/libssh-agent-pkcs11-provider_g.@SHOBJEXT@"
+	cp libssh-agent-pkcs11-provider.@SHOBJEXT@ "$(DESTDIR)$(libdir)/"
+	-cp libssh-agent-pkcs11-provider_g.@SHOBJEXT@ "$(DESTDIR)$(libdir)/"
+
+clean:
+	rm -f test
+	rm -f libssh-agent-client.a libssh-agent-pkcs11-provider.@SHOBJEXT@
+	rm -f libssh-agent-client.o libssh-agent-pkcs11-provider.o asn1-x509.o
+	rm -f libssh-agent-client_g.a libssh-agent-pkcs11-provider_g.@SHOBJEXT@
+	rm -f libssh-agent-client_g.o libssh-agent-pkcs11-provider_g.o asn1-x509_g.o
+
+distclean: clean
+	rm -f config.log config.status config.h Makefile
+
+mrproper: distclean
+	rm -f $(srcdir)/configure $(srcdir)/config.h.in $(srcdir)/aclocal.m4
+	rm -f $(srcdir)/config.sub $(srcdir)/config.guess $(srcdir)/install-sh
+
+.PHONY: all clean distclean mrproper install
