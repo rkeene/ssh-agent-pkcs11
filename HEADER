@@ -3,10 +3,7 @@
 Release information:
     pkg: SSH Agent PKCS11 version @@VERS@@
    date: @@DATE@@
- author: US Army Corps of Engineers
-contact: Roy Keene <roy.s.keene@usace.army.mil>
-         US Army Corps of Engineers
-         Information Technology Laboratory
-         Vicksburg, MS 39180
+ author: Roy Keene
+contact: Roy Keene <ssh-agent@rkeene.org>
 --------------------------------------------------------------------------
 
