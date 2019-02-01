@@ -1,1 +1,22 @@
+# Build Directory
 build/work/*
+
+# Build system
+aclocal.m4
+config.guess
+config.h.in
+config.sub
+configure
+install-sh
+
+# Configure output
+Makefile
+config.h
+config.log
+config.status
+
+# Build output
+asn1-x509.o
+libssh-agent-client.a
+libssh-agent-client.o
+libssh-agent-pkcs11-provider.o
