@@ -51,7 +51,7 @@ struct x509_object {
 				struct asn1_object pubkey;
 };
 
-static int _asn1_x509_read_asn1_object(unsigned char *buf, size_t buflen, va_list *args) {
+int _asn1_x509_read_asn1_object(unsigned char *buf, size_t buflen, va_list *args) {
 	unsigned char small_object_size;
 	unsigned char *buf_p;
 	struct asn1_object *outbuf;
@@ -127,7 +127,7 @@ static int _asn1_x509_read_asn1_object(unsigned char *buf, size_t buflen, va_lis
 	return(_asn1_x509_read_asn1_object(buf_p, buflen, args));
 }
 
-static int asn1_x509_read_asn1_object(unsigned char *buf, size_t buflen, ...) {
+int asn1_x509_read_asn1_object(unsigned char *buf, size_t buflen, ...) {
 	va_list args;
 	int retval;
 
@@ -140,7 +140,7 @@ static int asn1_x509_read_asn1_object(unsigned char *buf, size_t buflen, ...) {
 	return(retval);
 }
 
-static int asn1_x509_read_object(unsigned char *buf, size_t buflen, struct x509_object *outbuf) {
+int asn1_x509_read_object(unsigned char *buf, size_t buflen, struct x509_object *outbuf) {
 	int read_ret;
 
 	read_ret = asn1_x509_read_asn1_object(buf, buflen, &outbuf->wholething, NULL);
@@ -215,7 +215,7 @@ ssize_t x509_to_subject(void *x509_der_buf, size_t x509_der_buf_len, void **outb
 	return(x509.subject.asn1rep_len);
 }
 
-static ssize_t x509_to_serial(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
+ssize_t x509_to_serial(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
 	struct x509_object x509;
 	int read_ret;
 
@@ -234,7 +234,7 @@ static ssize_t x509_to_serial(void *x509_der_buf, size_t x509_der_buf_len, void 
 	return(x509.serial_number.asn1rep_len);
 }
 
-static ssize_t x509_to_pubkey(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
+ssize_t x509_to_pubkey(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
 	struct x509_object x509;
 	int read_ret;
 
@@ -247,7 +247,7 @@ static ssize_t x509_to_pubkey(void *x509_der_buf, size_t x509_der_buf_len, void 
 	return(x509.pubkey.size);
 }
 
-static ssize_t x509_to_modulus(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
+ssize_t x509_to_modulus(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
 	struct asn1_object null, pubkey, modulus, exponent;
 	struct x509_object x509;
 	int read_ret;
@@ -275,7 +275,7 @@ static ssize_t x509_to_modulus(void *x509_der_buf, size_t x509_der_buf_len, void
 	return(modulus.size);
 }
 
-static ssize_t x509_to_exponent(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
+ssize_t x509_to_exponent(void *x509_der_buf, size_t x509_der_buf_len, void **outbuf) {
 	struct asn1_object null, pubkey, modulus, exponent;
 	struct x509_object x509;
 	int read_ret;
@@ -303,7 +303,7 @@ static ssize_t x509_to_exponent(void *x509_der_buf, size_t x509_der_buf_len, voi
 	return(exponent.size);
 }
 
-static ssize_t x509_to_keysize(void *x509_der_buf, size_t x509_der_buf_len) {
+ssize_t x509_to_keysize(void *x509_der_buf, size_t x509_der_buf_len) {
 	struct asn1_object null, pubkey, modulus, exponent;
 	struct x509_object x509;
 	int read_ret;
@@ -330,7 +330,7 @@ static ssize_t x509_to_keysize(void *x509_der_buf, size_t x509_der_buf_len) {
 /*
  * http://www.blackberry.com/developers/docs/4.6.0api/javax/microedition/pki/Certificate.html
  */
-static const char *_x509_objectid_to_label_string(void *buf, size_t buflen) {
+const char *_x509_objectid_to_label_string(void *buf, size_t buflen) {
 	switch (buflen) {
 		case 3:
 			if (memcmp(buf, "\x55\x04\x03", 3) == 0) {
@@ -368,7 +368,7 @@ static const char *_x509_objectid_to_label_string(void *buf, size_t buflen) {
 	return("???");
 }
 
-static ssize_t x509_dn_to_string(void *asn1_der_buf, size_t asn1_der_buf_len, char *outbuf, size_t outbuf_len, char *matchlabel) {
+ssize_t x509_dn_to_string(void *asn1_der_buf, size_t asn1_der_buf_len, char *outbuf, size_t outbuf_len, char *matchlabel) {
 	struct asn1_object whole_thing, current_set, current_seq;
 	struct asn1_object label, value;
 	const char *label_str;
