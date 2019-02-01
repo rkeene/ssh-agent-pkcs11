@@ -726,7 +726,7 @@ CK_DEFINE_FUNCTION(CK_RV, C_Finalize)(CK_VOID_PTR pReserved) {
 }
 
 CK_DEFINE_FUNCTION(CK_RV, C_GetInfo)(CK_INFO_PTR pInfo) {
-	static CK_UTF8CHAR manufacturerID[] = "U.S. Government";
+	static CK_UTF8CHAR manufacturerID[] = "SSH Agent";
 	static CK_UTF8CHAR libraryDescription[] = "SSH Agent PKCS#11";
 
 	LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Called.");
@@ -817,7 +817,7 @@ CK_DEFINE_FUNCTION(CK_RV, C_GetSlotList)(CK_BBOOL tokenPresent, CK_SLOT_ID_PTR p
 }
 
 CK_DEFINE_FUNCTION(CK_RV, C_GetSlotInfo)(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
-	static CK_UTF8CHAR manufacturerID[] = "U.S. Government";
+	static CK_UTF8CHAR manufacturerID[] = "SSH Agent";
 	static CK_UTF8CHAR slotDescription[] = "SSH Agent Slot";
 
 	LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Called.");
