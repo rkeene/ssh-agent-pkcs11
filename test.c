@@ -164,7 +164,7 @@ int main_ssh_agent_pkcs11_provider(void) {
 	CK_ULONG byte_idx;
 	CK_UTF8CHAR user_pin[1024], *pucValue;
 	CK_OBJECT_CLASS objectClass;
-	CK_BYTE signature[1024], encrypted_buf[16384], decrypted_buf[16384];
+	CK_BYTE signature[4096], encrypted_buf[16384], decrypted_buf[16384];
 	CK_ULONG signature_len, encrypted_buflen, decrypted_buflen;
 	CK_MECHANISM mechanism = {CKM_RSA_PKCS, NULL, 0};
 	CK_RV chk_rv;

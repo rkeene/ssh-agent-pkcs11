@@ -404,7 +404,7 @@ void ssh_agent_freeidentities(struct ssh_agent_identity *identities) {
 
 /* Returns: Size of signed (encrypted) data written to "retbuf", or -1 on error */
 ssize_t ssh_agent_sign(int fd, unsigned char *databuf, size_t databuflen, unsigned char *retbuf, size_t retbuflen, struct ssh_agent_identity *identity, int doHash) {
-	unsigned char buf[1024], *buf_p;
+	unsigned char buf[4096], *buf_p;
 	char *msgtype;
 	uint32_t flags = 0, bloblen, datalen;
 	ssize_t recv_ret, send_ret, msgtypelen, msglen;
@@ -508,7 +508,7 @@ ssize_t ssh_agent_sign(int fd, unsigned char *databuf, size_t databuflen, unsign
 
 /* Returns: Size of decrypted data written to "retbuf", or -1 on error */
 ssize_t ssh_agent_decrypt(int fd, unsigned char *databuf, size_t databuflen, unsigned char *retbuf, size_t retbuflen, struct ssh_agent_identity *identity) {
-	unsigned char buf[1024], *buf_p;
+	unsigned char buf[4096], *buf_p;
 	uint32_t flags = 0, bloblen, datalen;
 	ssize_t recv_ret, send_ret, msglen;
 

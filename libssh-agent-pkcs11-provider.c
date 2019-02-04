@@ -246,7 +246,7 @@ static CK_ATTRIBUTE_PTR libssh_agent_pkcs11_get_attributes(CK_OBJECT_CLASS objec
 	CK_OBJECT_CLASS ck_object_class;
 	CK_CERTIFICATE_TYPE ck_certificate_type;
 	CK_KEY_TYPE ck_key_type;
-	CK_UTF8CHAR ucTmpBuf[1024];
+	CK_UTF8CHAR ucTmpBuf[4096];
 	unsigned char certificate[16384];
 	ssize_t getcert_ret, certificate_len = -1, x509_read_ret;
 	int fd;
@@ -1108,7 +1108,7 @@ CK_DEFINE_FUNCTION(CK_RV, C_OpenSession)(CK_SLOT_ID slotID, CK_FLAGS flags, CK_V
 	struct libssh_agent_pkcs11_identity *identities;
 	struct ssh_agent_identity *ssh_identities, *curr_ssh_id;
 	unsigned long idx, num_ids, id_idx, curr_id_type, curr_ssh_id_idx;
-	CK_BYTE sigbuf[1024];
+	CK_BYTE sigbuf[4096];
 	ssize_t sigbuflen;
 	int mutex_retval;
 	int found_session = 0;
@@ -2706,7 +2706,7 @@ CK_DEFINE_FUNCTION(CK_RV, C_SignUpdate)(CK_SESSION_HANDLE hSession, CK_BYTE_PTR 
 }
 
 CK_DEFINE_FUNCTION(CK_RV, C_SignFinal)(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature, CK_ULONG_PTR pulSignatureLen) {
-	static CK_BYTE sigbuf[1024];
+	static CK_BYTE sigbuf[4096];
 	ssize_t sigbuflen;
 	CK_RV retval = CKR_GENERAL_ERROR;
 	int terminate_sign = 1;
