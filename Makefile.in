@@ -21,8 +21,8 @@ all: libssh-agent-pkcs11-provider.@SHOBJEXT@ libssh-agent-pkcs11-provider_g.@SHO
 	$(MAKE) libssh-agent-pkcs11-provider.@SHOBJEXT@
 	-$(MAKE) libssh-agent-pkcs11-provider_g.@SHOBJEXT@
 
-test: $(srcdir)/test.c libssh-agent-client.a libssh-agent-pkcs11-provider.@SHOBJEXT@
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -L. -o test $(srcdir)/test.c $(LIBS) -lssh-agent-client -lssh-agent-pkcs11-provider
+test: $(srcdir)/test.c libssh-agent-client_g.a libssh-agent-pkcs11-provider_g.@SHOBJEXT@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -L. -Wl,-rpath,. -o test $(srcdir)/test.c $(LIBS) -lssh-agent-client_g -lssh-agent-pkcs11-provider_g
 
 libssh-agent-client.a: libssh-agent-client.o
 	$(AR) cru libssh-agent-client.a libssh-agent-client.o

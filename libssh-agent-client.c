@@ -22,6 +22,7 @@
 #ifdef HAVE_STDIO_H
 #  include <string.h>
 #endif
+#include <stdbool.h>
 
 #include "debug.h"
 
@@ -219,7 +220,7 @@ static int32_t ssh_agent_buffer_getint(unsigned char *basebuf, size_t buflen, un
 	return(retval);
 }
 
-static ssize_t ssh_agent_buffer_getstr(unsigned char *basebuf, size_t buflen, unsigned char **buf_p, unsigned char **bufret, size_t bytestoread, int mallocbufret) {
+static ssize_t ssh_agent_buffer_getstr(unsigned char *basebuf, size_t buflen, unsigned char **buf_p, unsigned char **bufret, size_t bytestoread, int retmode) {
 	unsigned char *buf_end;
 	int32_t msglen;
 
@@ -240,18 +241,29 @@ static ssize_t ssh_agent_buffer_getstr(unsigned char *basebuf, size_t buflen, un
 		return(-1);
 	}
 
-	if (mallocbufret) {
-		*bufret = malloc(msglen + 1);
-		if (!*bufret) {
-			LIBSSH_AGENT_CLIENT_DEBUG_PERROR("malloc");
+	switch (retmode) {
+		case 0:
+			/* Copy to new buffer */
+			memcpy(*bufret, *buf_p, msglen);
+			break;
+		case 1:
+			/* Malloc and copy to new buffer */
+			*bufret = malloc(msglen + 1);
+			if (!*bufret) {
+				LIBSSH_AGENT_CLIENT_DEBUG_PERROR("malloc");
 
-			return(-1);
-		}
+				return(-1);
+			}
 
-		(*bufret)[msglen] = '\0';
+			(*bufret)[msglen] = '\0';
+
+			memcpy(*bufret, *buf_p, msglen);
+			break;
+		case 2:
+			/* Just return the new buffer */
+			*bufret = *buf_p;
+			break;
 	}
-
-	memcpy(*bufret, *buf_p, msglen);
 
 	*buf_p += msglen;
 
@@ -262,8 +274,10 @@ static ssize_t ssh_agent_buffer_getstr(unsigned char *basebuf, size_t buflen, un
 struct ssh_agent_identity *ssh_agent_getidentities(int fd) {
 	struct ssh_agent_identity *identities = NULL;
 	unsigned char buf[16384], *buf_p, *buf_end;
+	unsigned char *bufInternalTmp, *bufInternal;
 	uint32_t numIds, currId, i;
-	ssize_t send_ret, recv_ret, currIdLen, currCommentLen;
+	ssize_t send_ret, recv_ret, currIdLen, bufInternalLen, currCommentLen;
+	bool validIdentity;
 
 	buf[0] = SSH2_AGENTC_REQUEST_IDENTITIES;
 	send_ret = ssh_agent_send(fd, buf, 1, 0);
@@ -319,6 +333,30 @@ struct ssh_agent_identity *ssh_agent_getidentities(int fd) {
 		currCommentLen = ssh_agent_buffer_getstr(buf, sizeof(buf), &buf_p, (unsigned char **) &identities[currId].comment, 0, 1);
 		if (currCommentLen < 0) {
 			goto ssh_agent_getidentities_failure;
+		}
+
+		/*
+		 * Filter out items that are not x509v3-*
+		 */
+		bufInternalTmp = identities[currId].blob;
+		bufInternalLen = ssh_agent_buffer_getstr(identities[currId].blob, currIdLen, &bufInternalTmp, &bufInternal, 0, 2);
+		validIdentity = false;
+		if (bufInternalLen >= 7 && memcmp(bufInternal, "x509v3-", 7) == 0) {
+			validIdentity = true;
+		} else {
+			if (bufInternalLen > 0 && bufInternalLen < 65536) {
+				LIBSSH_AGENT_CLIENT_DEBUG_PRINTBUF("Ignored:", bufInternal, bufInternalLen);
+			}
+		}
+
+		if (!validIdentity) {
+			free(identities[currId].blob);
+			free(identities[currId].comment);
+			identities[currId].blob = NULL;
+			identities[currId].comment = NULL;
+			currId--;
+			numIds--;
+			continue;
 		}
 
 		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("ID#%i: %s", currId, identities[currId].comment);
@@ -536,14 +574,9 @@ ssize_t ssh_agent_decrypt(int fd, unsigned char *databuf, size_t databuflen, uns
 
 	buf_p = buf;
 
-#if 0
-	/* XXX:TODO: Rewrite to new mechanism */
-	if (*buf_p != SSH2_AGENT_DECRYPT_RESPONSE) {
-#else
-	if (1) {
-		abort();
-#endif
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable decrypting response.  Got %i, expected %i.", *buf_p, /*SSH2_AGENT_DECRYPT_RESPONSE*/0);
+	if (*buf_p != SSH2_AGENT_SIGN_RESPONSE) {
+		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable decrypting response.  Got %i, expected %i.", *buf_p, SSH2_AGENT_SIGN_RESPONSE);
+
 		return(-1);
 	}
 	buf_p++;
@@ -570,9 +603,10 @@ ssize_t ssh_agent_decrypt(int fd, unsigned char *databuf, size_t databuflen, uns
 
 /* Returns: Size of DER encoded X.509 certificate stored in "retbuf", or -1 on error */
 ssize_t ssh_agent_getcert(int fd, unsigned char *retbuf, size_t retbuflen, struct ssh_agent_identity *identity) {
-	unsigned char buf[16384], *buf_p;
-	uint32_t bloblen;
-	ssize_t recv_ret, send_ret, msglen;
+	unsigned char *buf, *buf_p, *idType;
+	uint32_t bufLen, numCerts;
+	ssize_t idTypeLen, certLen;
+	bool validIdentity;
 
 	if (!retbuf) {
 		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("retbuf is NULL");
@@ -586,69 +620,42 @@ ssize_t ssh_agent_getcert(int fd, unsigned char *retbuf, size_t retbuflen, struc
 		return(-1);
 	}
 
-	if ((1 + sizeof(bloblen) + identity->bloblen) > sizeof(buf)) {
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Buffer too small to hold outgoing data (need atleast %i, have only %i)", (1 + sizeof(bloblen) + identity->bloblen), sizeof(buf));
+	buf = identity->blob;
+	bufLen = identity->bloblen;
+
+	if (retbuflen < bufLen) {
+		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("retbuflen is too small (should be atleast %llu, is %llu)",
+		    (unsigned long long) bufLen,
+		    (unsigned long long) retbuflen
+		);
 
 		return(-1);
 	}
 
 	buf_p = buf;
 
-#if 0
-	/* XXX:TODO: Rewrite to use new mechanism */
-	*buf_p = SSH2_AGENTC_PKCS11_CERT_REQUEST;
-#else
-	*buf_p = 0;
-	abort();
-#endif
-	buf_p++;
-
-	bloblen = htonl(identity->bloblen);
-	memcpy(buf_p, &bloblen, sizeof(bloblen));
-	buf_p += sizeof(bloblen);
-
-	memcpy(buf_p, identity->blob, identity->bloblen);
-	buf_p += identity->bloblen;
-
-	send_ret = ssh_agent_send(fd, buf, buf_p - buf, 0);
-	if (send_ret != (buf_p - buf)) {
-		return(-1);
+	idTypeLen = ssh_agent_buffer_getstr(buf, bufLen, &buf_p, &idType, 0, 2);
+	validIdentity = false;
+	if (idTypeLen >= 7 && memcmp(idType, "x509v3-", 7) == 0) {
+		validIdentity = true;
 	}
 
-	recv_ret = ssh_agent_recv(fd, buf, sizeof(buf));
-	if (recv_ret < 1) {
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Received too little data. Got %i, expected atleast 1.", recv_ret);
-		return(-1);
-	}
-
-	buf_p = buf;
-
-#if 0
-	/* XXX:TODO: Rewrite to use new mechanism */
-	if (*buf_p != SSH2_AGENT_PKCS11_CERT_RESPONSE) {
-#else
-	if (1) {
-		abort();
-#endif
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable certificate request response.  Got %i, expected %i.", *buf_p, /*SSH2_AGENT_PKCS11_CERT_RESPONSE*/0);
-		return(-1);
-	}
-	buf_p++;
-
-	msglen = ssh_agent_buffer_getint(buf, sizeof(buf), &buf_p);
-
-	if (msglen < 0) {
-		return(-1);
-	}
-
-	if (msglen > ((ssize_t) retbuflen)) {
-		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Return buffer too small.");
+	if (!validIdentity) {
+		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("identity is invalid");
 
 		return(-1);
 	}
 
-	msglen = ssh_agent_buffer_getstr(buf, sizeof(buf), &buf_p, &retbuf, msglen, 0);
+	numCerts = ssh_agent_buffer_getint(buf, bufLen, &buf_p);
+	if (numCerts < 1) {
+		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Too few certifificates in chain (%llu, should be atleast 1)",
+			(unsigned long long) numCerts
+		);
+	}
 
-	return(msglen);
+	certLen = ssh_agent_buffer_getstr(buf, bufLen, &buf_p, &retbuf, 0, 0);
+	LIBSSH_AGENT_CLIENT_DEBUG_PRINTBUF("cert", retbuf, certLen);
+
+	return(certLen);
 }
 
