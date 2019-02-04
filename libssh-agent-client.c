@@ -362,6 +362,10 @@ struct ssh_agent_identity *ssh_agent_getidentities(int fd) {
 		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("ID#%i: %s", currId, identities[currId].comment);
 	}
 
+	if (numIds == 0) {
+		goto ssh_agent_getidentities_failure;
+	}
+
 	return(identities);
 
 ssh_agent_getidentities_failure:
