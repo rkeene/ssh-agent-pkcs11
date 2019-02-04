@@ -60,6 +60,7 @@
 
 /* Extended sign flags */
 #define SSH2_AGENT_SIGNFLAGS_RSA_RAW            0x40000000LLU
+#define SSH2_AGENT_SIGNFLAGS_RSA_DECRYPT        0x80000000LLU
 
 struct ssh_agent_identity {
 	uint32_t bloblen;
@@ -497,14 +498,11 @@ ssize_t ssh_agent_decrypt(int fd, unsigned char *databuf, size_t databuflen, uns
 		return(-1);
 	}
 
+	flags = SSH2_AGENT_SIGNFLAGS_RSA_RAW | SSH2_AGENT_SIGNFLAGS_RSA_DECRYPT; 
+
 	buf_p = buf;
 
-#if 0
-	/* XXX:TODO: Rewrite to new framework */
-	*buf_p = SSH2_AGENTC_DECRYPT_REQUEST;
-#else
-	*buf_p = 0;
-#endif
+	*buf_p = SSH2_AGENTC_SIGN_REQUEST;
 	buf_p++;
 
 	bloblen = htonl(identity->bloblen);
@@ -543,6 +541,7 @@ ssize_t ssh_agent_decrypt(int fd, unsigned char *databuf, size_t databuflen, uns
 	if (*buf_p != SSH2_AGENT_DECRYPT_RESPONSE) {
 #else
 	if (1) {
+		abort();
 #endif
 		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable decrypting response.  Got %i, expected %i.", *buf_p, /*SSH2_AGENT_DECRYPT_RESPONSE*/0);
 		return(-1);
@@ -600,6 +599,7 @@ ssize_t ssh_agent_getcert(int fd, unsigned char *retbuf, size_t retbuflen, struc
 	*buf_p = SSH2_AGENTC_PKCS11_CERT_REQUEST;
 #else
 	*buf_p = 0;
+	abort();
 #endif
 	buf_p++;
 
@@ -628,6 +628,7 @@ ssize_t ssh_agent_getcert(int fd, unsigned char *retbuf, size_t retbuflen, struc
 	if (*buf_p != SSH2_AGENT_PKCS11_CERT_RESPONSE) {
 #else
 	if (1) {
+		abort();
 #endif
 		LIBSSH_AGENT_CLIENT_DEBUG_PRINTF("Did not get acceptable certificate request response.  Got %i, expected %i.", *buf_p, /*SSH2_AGENT_PKCS11_CERT_RESPONSE*/0);
 		return(-1);
